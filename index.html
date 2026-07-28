@@ -3,328 +3,424 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Snake Game</title>
+    <title>강아지 vs 고양이 AI 구분기</title>
+    <!-- TensorFlow.js & Teachable Machine Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <style>
         :root {
-            --neon-green: #0f0;
-            --neon-pink: #f0f;
-            --neon-blue: #0ff;
-            --bg-color: #050505;
-            --grid-color: #111;
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --dog-color: #f59e0b;
+            --cat-color: #ec4899;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         body {
-            margin: 0;
-            padding: 40px 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             background-color: var(--bg-color);
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-
-        #game-container {
-            position: relative;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
-            border: 2px solid var(--neon-green);
-            border-radius: 8px;
-        }
-
-        canvas {
-            display: block;
-            background-image: 
-                linear-gradient(var(--grid-color) 1px, transparent 1px),
-                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
-
-        #ui {
-            width: 400px;
+            color: var(--text-color);
+            min-height: 100vh;
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: bold;
-        }
-
-        .score-box {
-            color: var(--neon-blue);
-            text-shadow: 0 0 5px var(--neon-blue);
-        }
-
-        .high-score-box {
-            color: var(--neon-pink);
-            text-shadow: 0 0 5px var(--neon-pink);
-        }
-
-        #overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
-            z-index: 10;
-        }
-
-        #overlay h1 {
-            color: var(--neon-pink);
-            text-shadow: 0 0 10px var(--neon-pink);
-            margin-bottom: 20px;
-            font-size: 3rem;
-        }
-
-        #overlay button {
-            background: transparent;
-            border: 2px solid var(--neon-green);
-            color: var(--neon-green);
-            padding: 10px 20px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.3s;
-            box-shadow: 0 0 5px var(--neon-green);
-        }
-
-        #overlay button:hover {
-            background: var(--neon-green);
-            color: black;
-            box-shadow: 0 0 20px var(--neon-green);
-        }
-
-        .instructions {
-            margin: 20px 0 40px 0;
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        /* Disqus Container */
-        #comment-section {
-            width: 100%;
-            max-width: 800px;
             padding: 20px;
-            background: #111;
-            border-top: 1px solid #333;
-            margin-top: 50px;
-            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background-color: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            padding: 28px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        header p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .media-box {
+            position: relative;
+            width: 100%;
+            height: 280px;
+            background-color: #f1f5f9;
+            border-radius: 16px;
+            border: 2px dashed #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .media-box img, .media-box canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .upload-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            z-index: 1;
+        }
+
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.5;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #f1f5f9;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #e2e8f0;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .result-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .result-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .result-label-group {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .bar-bg {
+            width: 100%;
+            height: 12px;
+            background-color: #f1f5f9;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 6px;
+            transition: width 0.4s ease;
+        }
+
+        .dog-bar { background-color: var(--dog-color); }
+        .cat-bar { background-color: var(--cat-color); }
+
+        .status-msg {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        /* 로딩 스피너 */
+        .spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border-left-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div class="score-box">SCORE: <span id="score">0</span></div>
-        <div class="high-score-box">BEST: <span id="high-score">0</span></div>
-    </div>
+    <div class="container">
+        <header>
+            <h1>🐱 강아지 vs 고양이 AI 🐶</h1>
+            <p>사진을 올리거나 카메라인식으로 동물을 찾아보세요!</p>
+        </header>
 
-    <div id="game-container">
-        <canvas id="snakeCanvas" width="400" height="400"></canvas>
-        <div id="overlay">
-            <h1>GAME OVER</h1>
-            <button onclick="resetGame()">PLAY AGAIN</button>
+        <!-- 미디어 표시 영역 -->
+        <div class="media-box" id="media-box">
+            <div class="upload-placeholder" id="placeholder">
+                <svg class="upload-icon" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                </svg>
+                <span>사진을 선택하거나 웹캠을 켜주세요</span>
+            </div>
+            <img id="image-preview" style="display: none;" alt="미리보기">
+            <div id="webcam-container"></div>
+            <div class="spinner" id="spinner"></div>
         </div>
-    </div>
 
-    <div class="instructions">Use Arrow Keys or WASD to Move</div>
+        <!-- 컨트롤 버튼 -->
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                📷 사진 업로드
+            </button>
+            <button class="btn btn-secondary" id="webcam-btn" onclick="toggleWebcam()">
+                📹 카메라 켜기
+            </button>
+            <input type="file" id="file-input" accept="image/*" onchange="handleImageUpload(event)">
+        </div>
 
-    <!-- Disqus Comment Thread -->
-    <div id="comment-section">
-        <div id="disqus_thread"></div>
+        <!-- 분석 결과 -->
+        <div class="result-container" id="result-container">
+            <!-- 예측 바 항목들이 동적으로 추가되거나 제어됩니다 -->
+        </div>
+
+        <p class="status-msg" id="status-text">모델을 불러오는 중입니다...</p>
     </div>
 
     <script>
-        const canvas = document.getElementById('snakeCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
-        const highScoreElement = document.getElementById('high-score');
-        const overlay = document.getElementById('overlay');
+        // Teachable Machine 모델 URL 설정
+        const MODEL_URL = "https://teachablemachine.withgoogle.com/models/zsidQbT3d/";
 
-        const GRID_SIZE = 20;
-        const TILE_COUNT = canvas.width / GRID_SIZE;
+        let model, webcam, maxPredictions;
+        let isWebcamActive = false;
 
-        let snake = [{x: 10, y: 10}];
-        let food = {x: 15, y: 15};
-        let dx = 0;
-        let dy = 0;
-        let nextDx = 1;
-        let nextDy = 0;
-        let score = 0;
-        let highScore = localStorage.getItem('snakeHighScore') || 0;
-        let gameLoop;
-        let isGameOver = false;
-        let speed = 100;
-
-        highScoreElement.innerText = highScore;
-
-        // Key handlers
-        document.addEventListener('keydown', (e) => {
-            const keys = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd', ' '];
-            if (keys.includes(e.key.toLowerCase())) {
-                e.preventDefault(); // Prevent scrolling with keys
-            }
-
-            switch(e.key.toLowerCase()) {
-                case 'arrowup':
-                case 'w':
-                    if (dy !== 1) { nextDx = 0; nextDy = -1; }
-                    break;
-                case 'arrowdown':
-                case 's':
-                    if (dy !== -1) { nextDx = 0; nextDy = 1; }
-                    break;
-                case 'arrowleft':
-                case 'a':
-                    if (dx !== 1) { nextDx = -1; nextDy = 0; }
-                    break;
-                case 'arrowright':
-                case 'd':
-                    if (dx !== -1) { nextDx = 1; nextDy = 0; }
-                    break;
-            }
-        });
-
-        function draw() {
-            if (isGameOver) return;
-
-            // Move snake
-            dx = nextDx;
-            dy = nextDy;
-            
-            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-
-            // Wall collision
-            if (head.x < 0 || head.x >= TILE_COUNT || head.y < 0 || head.y >= TILE_COUNT) {
-                gameOver();
-                return;
-            }
-
-            // Self collision
-            for (let i = 0; i < snake.length; i++) {
-                if (snake[i].x === head.x && snake[i].y === head.y) {
-                    gameOver();
-                    return;
-                }
-            }
-
-            snake.unshift(head);
-
-            // Food collision
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
-                scoreElement.innerText = score;
-                if (score > highScore) {
-                    highScore = score;
-                    highScoreElement.innerText = highScore;
-                    localStorage.setItem('snakeHighScore', highScore);
-                }
-                spawnFood();
-                // Speed up slightly
-                if (speed > 50) {
-                    clearInterval(gameLoop);
-                    speed -= 1;
-                    gameLoop = setInterval(draw, speed);
-                }
-            } else {
-                snake.pop();
-            }
-
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw food
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#f0f';
-            ctx.fillStyle = '#f0f';
-            ctx.beginPath();
-            ctx.arc(food.x * GRID_SIZE + GRID_SIZE/2, food.y * GRID_SIZE + GRID_SIZE/2, GRID_SIZE/2 - 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Draw snake
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#0f0';
-            ctx.fillStyle = '#0f0';
-            snake.forEach((part, index) => {
-                const x = part.x * GRID_SIZE;
-                const y = part.y * GRID_SIZE;
-                
-                // Head is slightly different
-                if (index === 0) {
-                    ctx.fillStyle = '#0f0';
-                } else {
-                    ctx.fillStyle = '#0a0';
-                }
-                
-                ctx.fillRect(x + 1, y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
-            });
-            
-            ctx.shadowBlur = 0; // Reset blur for other elements
-        }
-
-        function spawnFood() {
-            food = {
-                x: Math.floor(Math.random() * TILE_COUNT),
-                y: Math.floor(Math.random() * TILE_COUNT)
-            };
-            // Don't spawn on snake
-            for (let part of snake) {
-                if (part.x === food.x && part.y === food.y) {
-                    spawnFood();
-                    break;
-                }
-            }
-        }
-
-        function gameOver() {
-            isGameOver = true;
-            clearInterval(gameLoop);
-            overlay.style.display = 'flex';
-        }
-
-        function resetGame() {
-            snake = [{x: 10, y: 10}];
-            dx = 0;
-            dy = 0;
-            nextDx = 1;
-            nextDy = 0;
-            score = 0;
-            speed = 100;
-            isGameOver = false;
-            scoreElement.innerText = score;
-            overlay.style.display = 'none';
-            spawnFood();
-            clearInterval(gameLoop);
-            gameLoop = setInterval(draw, speed);
-        }
-
-        // Start game
-        spawnFood();
-        gameLoop = setInterval(draw, speed);
-
-        /**
-        *  DISQUS INTEGRATION
-        */
-        var disqus_config = function () {
-            this.page.url = window.location.href;  
-            this.page.identifier = 'snake-game-page'; 
+        // 페이지 로드 시 초기화
+        window.onload = async function() {
+            await loadModel();
         };
-        (function() {
-            var d = document, s = d.createElement('script');
-            s.src = 'https://workspaces-codespaces-blank-index-html.disqus.com/embed.js';
-            s.setAttribute('data-timestamp', +new Date());
-            (d.head || d.body).appendChild(s);
-        })();
+
+        // 1. 모델 불러오기
+        async function loadModel() {
+            const statusText = document.getElementById('status-text');
+            const spinner = document.getElementById('spinner');
+            spinner.style.display = 'block';
+
+            try {
+                const modelURL = MODEL_URL + "model.json";
+                const metadataURL = MODEL_URL + "metadata.json";
+
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                statusText.innerText = "준비 완료! 사진을 업로드하거나 웹캠을 시작하세요.";
+                setupResultBars();
+            } catch (error) {
+                console.error("모델 로딩 실패:", error);
+                statusText.innerText = "모델을 불러오는 도중 오류가 발생했습니다.";
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+
+        // 2. 결과 출력 바 초기 세팅
+        function setupResultBars() {
+            const resultContainer = document.getElementById('result-container');
+            resultContainer.innerHTML = '';
+
+            for (let i = 0; i < maxPredictions; i++) {
+                const className = model.getClassLabels()[i];
+                const isCat = className.includes('고양이') || className.toLowerCase().includes('cat');
+
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.innerHTML = `
+                    <div class="result-label-group">
+                        <span id="label-${i}">${className}</span>
+                        <span id="percent-${i}">0%</span>
+                    </div>
+                    <div class="bar-bg">
+                        <div class="bar-fill ${isCat ? 'cat-bar' : 'dog-bar'}" id="bar-${i}"></div>
+                    </div>
+                `;
+                resultContainer.appendChild(item);
+            }
+        }
+
+        // 3. 이미지 업로드 처리 및 예측
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 웹캠이 켜져있다면 중지
+            if (isWebcamActive) {
+                stopWebcam();
+            }
+
+            const imgElement = document.getElementById('image-preview');
+            const placeholder = document.getElementById('placeholder');
+            const statusText = document.getElementById('status-text');
+
+            imgElement.src = URL.createObjectURL(file);
+            imgElement.style.display = 'block';
+            placeholder.style.display = 'none';
+
+            statusText.innerText = "분석 중...";
+
+            imgElement.onload = async function() {
+                const prediction = await model.predict(imgElement);
+                updatePredictions(prediction);
+                statusText.innerText = "분석이 완료되었습니다.";
+            };
+        }
+
+        // 4. 웹캠 토글
+        async function toggleWebcam() {
+            const webcamBtn = document.getElementById('webcam-btn');
+
+            if (isWebcamActive) {
+                stopWebcam();
+            } else {
+                await startWebcam();
+            }
+        }
+
+        // 웹캠 시작
+        async function startWebcam() {
+            const statusText = document.getElementById('status-text');
+            const placeholder = document.getElementById('placeholder');
+            const imgElement = document.getElementById('image-preview');
+            const webcamBtn = document.getElementById('webcam-btn');
+
+            // 이미지 미리보기 숨기기
+            imgElement.style.display = 'none';
+            placeholder.style.display = 'none';
+
+            statusText.innerText = "카메라를 연결하는 중...";
+
+            try {
+                const flip = true; 
+                webcam = new tmImage.Webcam(280, 280, flip);
+                await webcam.setup();
+                await webcam.play();
+
+                document.getElementById('webcam-container').innerHTML = '';
+                document.getElementById('webcam-container').appendChild(webcam.canvas);
+
+                isWebcamActive = true;
+                webcamBtn.innerText = "📹 카메라 끄기";
+                webcamBtn.style.backgroundColor = "#fee2e2";
+                webcamBtn.style.color = "#ef4444";
+
+                statusText.innerText = "실시간 분석 중...";
+                window.requestAnimationFrame(webcamLoop);
+            } catch (err) {
+                console.error("웹캠 연결 실패:", err);
+                statusText.innerText = "카메라에 접근할 수 없습니다. 권한을 확인해주세요.";
+                placeholder.style.display = 'flex';
+            }
+        }
+
+        // 웹캠 루프
+        async function webcamLoop() {
+            if (isWebcamActive) {
+                webcam.update();
+                await predictWebcam();
+                window.requestAnimationFrame(webcamLoop);
+            }
+        }
+
+        // 웹캠 예측
+        async function predictWebcam() {
+            const prediction = await model.predict(webcam.canvas);
+            updatePredictions(prediction);
+        }
+
+        // 웹캠 중지
+        function stopWebcam() {
+            if (webcam) {
+                webcam.stop();
+            }
+            isWebcamActive = false;
+            document.getElementById('webcam-container').innerHTML = '';
+            document.getElementById('placeholder').style.display = 'flex';
+            
+            const webcamBtn = document.getElementById('webcam-btn');
+            webcamBtn.innerText = "📹 카메라 켜기";
+            webcamBtn.style.backgroundColor = "#f1f5f9";
+            webcamBtn.style.color = "var(--text-color)";
+
+            document.getElementById('status-text').innerText = "카메라가 종료되었습니다.";
+        }
+
+        // 5. 예측 결과 UI 업데이트
+        function updatePredictions(prediction) {
+            for (let i = 0; i < maxPredictions; i++) {
+                const probability = (prediction[i].probability * 100).toFixed(1);
+                
+                document.getElementById(`percent-${i}`).innerText = `${probability}%`;
+                document.getElementById(`bar-${i}`).style.width = `${probability}%`;
+            }
+        }
     </script>
-    <!-- Disqus Count Script provided by user -->
-    <script id="dsq-count-scr" src="//workspaces-codespaces-blank-index-html.disqus.com/count.js" async></script>
-    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </body>
 </html>
